@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:parking/widgets/AvailScreen.dart';
-import 'package:parking/widgets/BookPage.dart';
-import '../config/shared_prefs.dart';
 import '../config/parking_repository.dart';
-import '../main.dart';
 import 'bookingConfirm.dart';
-import 'UserForm.dart';
-import 'LoginForm.dart';
-import 'AvailScreen.dart';
+import 'package:parking/services/auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Loginscreen extends StatefulWidget {
   const Loginscreen({super.key});
@@ -21,6 +17,8 @@ class _LoginscreenState extends State<Loginscreen> {
   double _scale = 0.1;
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final auth = AuthService();
 
   @override
   void initState() {
@@ -30,53 +28,15 @@ class _LoginscreenState extends State<Loginscreen> {
         _scale = 1.0;
       });
     });
-    _checkSavedUser();
   }
 
-  void navigateToUserForm(String savedName) {
-    Navigator.push(
+  void navigateToAvailability(String email) {
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => AvailabilityScreen(userName: savedName),
+        builder: (_) => AvailabilityScreen(userName: email),
       ),
     );
-  }
-
-  Future<void> _checkSavedUser() async {
-    final savedName = await UserData.getUserName();
-
-    if (savedName == null) return;
-
-    final parkingRepository = ParkingRepository();
-    final userSlot = await parkingRepository.hasUserBookedToday(
-      name: savedName,
-    );
-
-    if (!mounted) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (userSlot != null) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BookingConfirmationPage(
-              slotNumber: userSlot,
-              vehicleType: "Car",
-              userName: savedName,
-            ),
-          ),
-          (route) => false,
-        );
-      } else {
-        // User saved but not booked → go to booking page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AvailabilityScreen(userName: savedName),
-          ),
-        );
-      }
-    });
   }
 
   @override
@@ -162,23 +122,53 @@ class _LoginscreenState extends State<Loginscreen> {
                                 return null;
                               },
                             ),
+                            SizedBox(height: 20),
+                            TextFormField(
+                              controller: _passwordController,
+                              keyboardType: TextInputType.visiblePassword,
+                              decoration: InputDecoration(
+                                labelText: "Password",
+                                hintText: "Enter your password",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                prefixIcon: Icon(Icons.password_outlined),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return "Password is required";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
-
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (_formKey.currentState!.validate()) {
-                          print("Valid email: ${_emailController.text}");
-                          UserData.saveUserData(
-                            _emailController.text.split("@").first,
-                            "",
-                          );
-                          navigateToUserForm(
-                            _emailController.text.split("@").first,
-                          );
+                          try {
+                            final success = await auth.signIn(
+                              _emailController.text.trim(),
+                              _passwordController.text.trim(),
+                            );
+
+                            if (success && mounted) {
+                              navigateToAvailability(
+                                _emailController.text.trim(),
+                              );
+                            }
+                          } catch (e) {
+                            print(e);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Login failed: $e")),
+                              );
+                            }
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(

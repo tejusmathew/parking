@@ -8,7 +8,6 @@ class ParkingFloor extends StatefulWidget {
   final Map<int, bool> parkingState;
   final String userName;
   final String tower;
-
   const ParkingFloor({
     super.key,
     required this.floorName,
@@ -129,9 +128,9 @@ class _ParkingFloorState extends State<ParkingFloor> {
                     if (!isAvailable)
                       Image.asset(
                         widget.vehicleType == "Car"
-                            ? "Car-top.png"
-                            : "Bike-top.png",
-                        width: 150,
+                            ? "assets/Car-top.png"
+                            : "assets/Bike-Top.png",
+                        width: 120,
                       ),
 
                     Text(

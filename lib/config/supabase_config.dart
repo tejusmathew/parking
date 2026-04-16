@@ -22,13 +22,12 @@ class SupabaseConfig {
         throw Exception("Missing 'anonkey' in .env file.");
       }
 
-      await Supabase.initialize(
-        url: url,
-        anonKey: anonKey,
-      );
+      await Supabase.initialize(url: url, anonKey: anonKey);
     } catch (e) {
       // Re-throw with context
       throw Exception("Supabase initialization failed: $e");
     }
   }
+
+  static SupabaseClient get client => Supabase.instance.client;
 }

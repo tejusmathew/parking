@@ -11,6 +11,7 @@ class Loginform extends StatefulWidget {
 class _LoginformState extends State<Loginform> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   double _scale = 0.1;
 
   @override
@@ -93,6 +94,27 @@ class _LoginformState extends State<Loginform> {
 
                             if (!value.endsWith("@office.com")) {
                               return "Must use your office.com email";
+                            }
+
+                            return null;
+                          },
+                        ),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          keyboardType: TextInputType.visiblePassword,
+                          decoration: InputDecoration(
+                            labelText: "Password",
+                            hintText: "Enter your password",
+
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: Icon(Icons.password_outlined),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Password is required";
                             }
 
                             return null;

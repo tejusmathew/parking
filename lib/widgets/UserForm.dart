@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:parking/widgets/bookingConfirm.dart';
-import '../config/shared_prefs.dart';
 import '../config/parking_repository.dart';
-import '../main.dart';
 import 'BookPage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserForm extends StatefulWidget {
   const UserForm({Key? key}) : super(key: key);
@@ -13,7 +12,6 @@ class UserForm extends StatefulWidget {
 }
 
 class _UserFormState extends State<UserForm> {
-  final TextEditingController _nameController = TextEditingController();
   final List<String> _vehicleTypes = ['Car', 'Bike'];
   String? _selectedVehicle;
 
@@ -25,14 +23,12 @@ class _UserFormState extends State<UserForm> {
   }
 
   Future<void> _checkSavedUser() async {
-    final savedName = await UserData.getUserName();
-    final savedVehicle = await UserData.getVehicleType();
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
 
-    if (savedName == null || savedVehicle == null) return;
-
+    final userEmail = user.email ?? '';
     final parkingRepository = ParkingRepository();
-    final userSlot =
-        await parkingRepository.hasUserBookedToday(name: savedName);
+    final userSlot = await parkingRepository.hasUserBookedToday(name: userEmail);
 
     if (!mounted) return;
 
@@ -43,22 +39,34 @@ class _UserFormState extends State<UserForm> {
           MaterialPageRoute(
             builder: (_) => BookingConfirmationPage(
               slotNumber: userSlot,
-              vehicleType: savedVehicle,
-              userName: savedName,
+              vehicleType: _selectedVehicle!,
+              userName: userEmail,
             ),
           ),
           (route) => false,
         );
-      } else {
-        // User saved but not booked → go to booking page
+      }
+    });
+  }
+
+  Future<void> submitForm() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    final userEmail = user.email ?? '';
+
+    if (!mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => MyBookPage(
               tower: "a",
-              selectedVehicle: savedVehicle,
-              userName: savedName,
-              floors: ["1st Floor", "2nd Floor", "3rd Floor"],
+              selectedVehicle: _selectedVehicle!,
+              userName: userEmail,
+              floors: const ["1st Floor", "2nd Floor", "3rd Floor"],
             ),
           ),
         );
@@ -67,120 +75,76 @@ class _UserFormState extends State<UserForm> {
   }
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> submitForm() async {
-    final name = _nameController.text.trim();
-
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your name')),
-      );
-      return;
-    }
-
-    await UserData.saveUserData(name, _selectedVehicle!);
-
-    if (!mounted) return;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MyBookPage
-        (tower: "a",
-          selectedVehicle: _selectedVehicle!,
-          userName: name,
-          floors: ["1st Floor", "2nd Floor", "3rd Floor"],
-        ),
-      ),
-    );
-  }
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: Colors.grey[100],
-    body: Center(
-      child: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Center(
-                    child: Text(
-                      "Book Parking Slot",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Name',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Vehicle Type',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: _selectedVehicle,
-                    items: _vehicleTypes.map((vehicle) {
-                      return DropdownMenuItem(
-                        value: vehicle,
-                        child: Text(vehicle),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedVehicle = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 30),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: submitForm,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: Center(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Text(
+                        "Book Parking Slot",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: const Text(
-                        "Book",
-                        style: TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 30),
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Vehicle Type',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedVehicle,
+                      items: _vehicleTypes.map((vehicle) {
+                        return DropdownMenuItem(
+                          value: vehicle,
+                          child: Text(vehicle),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedVehicle = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: submitForm,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Book",
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

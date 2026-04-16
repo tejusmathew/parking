@@ -3,6 +3,9 @@ import 'parking_state.dart';
 
 class ParkingRepository {
   final SupabaseClient _client = Supabase.instance.client;
+
+  getallSlots() {}
+
   final BikeSpacesTower1 = [320, 355, 358, 362, 363, 364, 365, 366, 377];
 
   final BikeSpacesTower2 = [

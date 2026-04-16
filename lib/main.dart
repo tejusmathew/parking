@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:parking/config/parking_repository.dart';
 import 'package:parking/widgets/LoginScreen.dart';
-import 'widgets/parkingfloor.dart';
-import 'widgets/UserForm.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/supabase_config.dart';
-import 'config/parking_state.dart';
-import 'config/parking_repository.dart';
-import 'config/shared_prefs.dart';
-import 'widgets/bookingConfirm.dart';
 import 'widgets/splashScreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Try to load .env file, but don't fail if it doesn't exist (for web deployment)
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
@@ -21,8 +14,11 @@ void main() async {
   }
 
   await SupabaseConfig.initializeSupabase();
-  print(await UserData.getUserName());
-  print(await UserData.getVehicleType());
+  final session = Supabase.instance.client.auth.currentSession;
+  print(session);
+
+  final user = Supabase.instance.client.auth.currentUser;
+  print(user?.email);
   runApp(const MyApp());
 }
 
@@ -49,13 +45,12 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.green[400]!),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green[400]!),
       ),
-      home:  SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -124,7 +119,7 @@ class _MyHomePageState extends State<MyHomePage> {
           // action in the IDE, or press "p" in the console), to see the
           // wireframe for each widget.
           mainAxisAlignment: .center,
-          children: [const UserForm(), const SizedBox(height: 30)],
+          children: [const SizedBox(height: 30)],
         ),
       ),
 

@@ -108,7 +108,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
         children: [
           Positioned.fill(
             child: Image.asset(
-              vehicle + "-" + tower + ".png",
+              "assets/$vehicle-$tower.png",
               fit: BoxFit.cover,
             ),
           ),
