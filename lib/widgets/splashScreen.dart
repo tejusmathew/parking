@@ -4,6 +4,8 @@ import 'package:parking/widgets/LoginScreen.dart';
 import 'package:parking/widgets/bookingConfirm.dart';
 import '../config/parking_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../main.dart';
+import 'package:app_links/app_links.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,9 +15,11 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  late final AppLinks _appLinks;
   @override
   void initState() {
     super.initState();
+    _initDeepLinks();
     _initialize();
   }
 
@@ -24,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final session = supabase.auth.currentSession;
     final user = supabase.auth.currentUser;
     print(session);
-    
+
     if (user == null) {
       _navigateToLogin();
       return;
@@ -48,6 +52,56 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigateToAvailability(userEmail);
   }
 
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+
+    _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    });
+
+    // App opened from closed state
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    });
+  }
+
+  Future<void> _handleDeepLink(Uri uri) async {
+    if (uri.host != 'book') return;
+  
+    final slot = int.tryParse(uri.queryParameters['slot'] ?? '');
+    if (slot == null) return;
+  
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+  
+    final name = user.email!;
+  
+    final repo = ParkingRepository();
+  
+    // Prevent double booking
+    
+    final existing = await repo.hasUserBookedToday(name: name);
+    if (existing != null) return;
+  
+    await repo.saveUser(
+      name: name,
+      vehicleType: "Car",
+      slotNumber: slot,
+    );
+  
+    navigatorKey.currentState!.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => BookingConfirmationPage(
+          slotNumber: slot,
+          vehicleType: "Car",
+          userName: name,
+        ),
+      ),
+    );
+  }
   void _navigateToLogin() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {

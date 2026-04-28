@@ -57,6 +57,7 @@ class ParkingRepository {
         .eq('name', name)
         .eq('date', dateOnly)
         .limit(1);
+    print(response);
     if (response.isEmpty) {
       return null; //
     }
